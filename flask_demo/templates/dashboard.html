@@ -1,0 +1,402 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Blood Work Analysis{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Dashboard</h2>
+    {% if dashboard.statistics.total_results == 0 %}
+        <p>No blood work data available yet. <a href="/upload">Upload a PDF report</a> to get started.</p>
+    {% else %}
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+            <div style="background: #e8f4f8; padding: 1.5rem; border-radius: 8px;">
+                <h3 style="font-size: 2rem; margin-bottom: 0.5rem;">{{ dashboard.statistics.total_results }}</h3>
+                <p style="color: #666;">Total Test Results</p>
+            </div>
+            <div style="background: #fef6e8; padding: 1.5rem; border-radius: 8px;">
+                <h3 style="font-size: 2rem; margin-bottom: 0.5rem;">{{ dashboard.statistics.num_abnormal }}</h3>
+                <p style="color: #666;">Abnormal Results</p>
+            </div>
+            <div style="background: #f0e8f8; padding: 1.5rem; border-radius: 8px;">
+                <h3 style="font-size: 2rem; margin-bottom: 0.5rem;">{{ dashboard.statistics.unique_tests }}</h3>
+                <p style="color: #666;">Unique Tests</p>
+            </div>
+            <div style="background: #e8f8f0; padding: 1.5rem; border-radius: 8px;">
+                <p style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">Date Range</p>
+                <p style="font-weight: 600;">{{ dashboard.statistics.date_range.start }}</p>
+                <p style="font-weight: 600;">to {{ dashboard.statistics.date_range.end }}</p>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+{% if dashboard.abnormal_tests %}
+<div class="card">
+    <h3>Abnormal Tests Summary</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Test Name</th>
+                <th>Occurrences</th>
+                <th>Latest Date</th>
+                <th>Latest Value</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for test_name, occurrences in dashboard.abnormal_tests.items() %}
+            <tr>
+                <td>{{ test_name }}</td>
+                <td><span class="badge badge-high">{{ occurrences|length }}</span></td>
+                <td>{{ occurrences[0].date }}</td>
+                <td>{{ occurrences[0].value }} <span class="badge badge-high">{{ occurrences[0].flag }}</span></td>
+                <td><a href="/test/{{ test_name }}" class="btn" style="padding: 0.25rem 0.75rem; font-size: 0.875rem;">View Trend</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+{% if dashboard.recent_tests %}
+<div class="card">
+    <h3>Recent Tests</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Test Name</th>
+                <th>Date</th>
+                <th>Value</th>
+                <th>Units</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for test in dashboard.recent_tests %}
+            <tr>
+                <td>{{ test.test_name }}</td>
+                <td>{{ test.date }}</td>
+                <td>{{ test.value }}</td>
+                <td>{{ test.units }}</td>
+                <td>
+                    {% if test.is_abnormal %}
+                        <span class="badge badge-{{ test.flag|lower }}">{{ test.flag }}</span>
+                    {% else %}
+                        <span class="badge badge-normal">NORMAL</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+{% if dashboard.statistics.total_results > 0 %}
+<div class="card">
+    <h2>Blood Work Trends</h2>
+    <p style="color: #666; margin-bottom: 2rem;">Interactive charts showing your test results over time. Click on test names to see detailed analysis.</p>
+
+    <!-- Lipid Panel -->
+    <h3 style="margin-top: 2rem; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">Lipid Panel</h3>
+    <div class="chart-grid">
+        <div class="chart-container">
+            <canvas id="chart-Cholesterol"></canvas>
+            <a href="/test/Cholesterol" class="chart-link">View Details</a>
+        </div>
+        <div class="chart-container">
+            <canvas id="chart-HDL-Cholesterol"></canvas>
+            <a href="/test/HDL Cholesterol" class="chart-link">View Details</a>
+        </div>
+        <div class="chart-container">
+            <canvas id="chart-LDL-Cholesterol"></canvas>
+            <a href="/test/LDL Cholesterol" class="chart-link">View Details</a>
+        </div>
+        <div class="chart-container">
+            <canvas id="chart-Triglyceride"></canvas>
+            <a href="/test/Triglyceride" class="chart-link">View Details</a>
+        </div>
+    </div>
+
+    <!-- Liver Function -->
+    <h3 style="margin-top: 2rem; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">Liver Function</h3>
+    <div class="chart-grid">
+        <div class="chart-container">
+            <canvas id="chart-ALT"></canvas>
+            <a href="/test/Alanine Aminotransferase" class="chart-link">View Details</a>
+        </div>
+        <div class="chart-container">
+            <canvas id="chart-GGT"></canvas>
+            <a href="/test/Gamma Glutamyl Transferase" class="chart-link">View Details</a>
+        </div>
+        <div class="chart-container">
+            <canvas id="chart-ALP"></canvas>
+            <a href="/test/Alkaline Phosphatase" class="chart-link">View Details</a>
+        </div>
+        <div class="chart-container">
+            <canvas id="chart-AST"></canvas>
+            <a href="/test/Aspartate Aminotransferase" class="chart-link">View Details</a>
+        </div>
+    </div>
+
+    <!-- Complete Blood Count -->
+    <h3 style="margin-top: 2rem; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">Complete Blood Count</h3>
+    <div class="chart-grid">
+        <div class="chart-container">
+            <canvas id="chart-WBC"></canvas>
+            <a href="/test/WBC" class="chart-link">View Details</a>
+        </div>
+        <div class="chart-container">
+            <canvas id="chart-RBC"></canvas>
+            <a href="/test/RBC" class="chart-link">View Details</a>
+        </div>
+        <div class="chart-container">
+            <canvas id="chart-Hemoglobin"></canvas>
+            <a href="/test/Hemoglobin" class="chart-link">View Details</a>
+        </div>
+        <div class="chart-container">
+            <canvas id="chart-Platelet-Count"></canvas>
+            <a href="/test/Platelet Count" class="chart-link">View Details</a>
+        </div>
+    </div>
+
+    <!-- Hormones -->
+    <h3 style="margin-top: 2rem; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">Hormones</h3>
+    <div class="chart-grid">
+        <div class="chart-container">
+            <canvas id="chart-Testosterone"></canvas>
+            <a href="/test/Testosterone" class="chart-link">View Details</a>
+        </div>
+        <div class="chart-container">
+            <canvas id="chart-Free-Testosterone"></canvas>
+            <a href="/test/Testosterone Free" class="chart-link">View Details</a>
+        </div>
+        <div class="chart-container">
+            <canvas id="chart-TSH"></canvas>
+            <a href="/test/Thyroid Stimulating Hormone" class="chart-link">View Details</a>
+        </div>
+        <div class="chart-container">
+            <canvas id="chart-Vitamin-D"></canvas>
+            <a href="/test/25-Hydroxy Vitamin D" class="chart-link">View Details</a>
+        </div>
+    </div>
+
+    <!-- Metabolic Panel -->
+    <h3 style="margin-top: 2rem; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">Metabolic Panel</h3>
+    <div class="chart-grid">
+        <div class="chart-container">
+            <canvas id="chart-Glucose"></canvas>
+            <a href="/test/Glucose Fasting" class="chart-link">View Details</a>
+        </div>
+        <div class="chart-container">
+            <canvas id="chart-HbA1C"></canvas>
+            <a href="/test/Hemoglobin A1C" class="chart-link">View Details</a>
+        </div>
+        <div class="chart-container">
+            <canvas id="chart-Creatinine"></canvas>
+            <a href="/test/Creatinine" class="chart-link">View Details</a>
+        </div>
+        <div class="chart-container">
+            <canvas id="chart-eGFR"></canvas>
+            <a href="/test/eGFR" class="chart-link">View Details</a>
+        </div>
+    </div>
+
+    <!-- Inflammation & Other -->
+    <h3 style="margin-top: 2rem; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">Inflammation & Other</h3>
+    <div class="chart-grid">
+        <div class="chart-container">
+            <canvas id="chart-CRP"></canvas>
+            <a href="/test/C Reactive Protein" class="chart-link">View Details</a>
+        </div>
+        <div class="chart-container">
+            <canvas id="chart-Iron"></canvas>
+            <a href="/test/Iron" class="chart-link">View Details</a>
+        </div>
+        <div class="chart-container">
+            <canvas id="chart-B12"></canvas>
+            <a href="/test/Vitamin B12" class="chart-link">View Details</a>
+        </div>
+        <div class="chart-container">
+            <canvas id="chart-Transferrin"></canvas>
+            <a href="/test/Transferrin Saturation" class="chart-link">View Details</a>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.chart-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 2rem;
+    margin-top: 1.5rem;
+    margin-bottom: 2rem;
+}
+.chart-container {
+    position: relative;
+    background: #f9f9f9;
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+}
+.chart-container canvas {
+    max-height: 250px;
+}
+.chart-link {
+    display: block;
+    text-align: center;
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    color: #3498db;
+    text-decoration: none;
+}
+.chart-link:hover {
+    text-decoration: underline;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Test mappings: canvas ID -> actual test name in database
+const testMappings = {
+    'Cholesterol': 'Cholesterol',
+    'HDL-Cholesterol': 'HDL Cholesterol',
+    'LDL-Cholesterol': 'LDL Cholesterol',
+    'Triglyceride': 'Triglyceride',
+    'ALT': 'Alanine Aminotransferase',
+    'GGT': 'Gamma Glutamyl Transferase',
+    'ALP': 'Alkaline Phosphatase',
+    'AST': 'Aspartate Aminotransferase',
+    'WBC': 'WBC',
+    'RBC': 'RBC',
+    'Hemoglobin': 'Hemoglobin',
+    'Platelet-Count': 'Platelet Count',
+    'Testosterone': 'Testosterone',
+    'Free-Testosterone': 'Testosterone Free',
+    'TSH': 'Thyroid Stimulating Hormone',
+    'Vitamin-D': '25-Hydroxy Vitamin D',
+    'Glucose': 'Glucose Fasting',
+    'HbA1C': 'Hemoglobin A1C',
+    'Creatinine': 'Creatinine',
+    'eGFR': 'eGFR',
+    'CRP': 'C Reactive Protein',
+    'Iron': 'Iron',
+    'B12': 'Vitamin B12',
+    'Transferrin': 'Transferrin Saturation'
+};
+
+// Load and render all charts
+Object.keys(testMappings).forEach(chartId => {
+    const testName = testMappings[chartId];
+    const canvasId = `chart-${chartId}`;
+
+    fetch(`/api/visualize/${encodeURIComponent(testName)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.chart_data) {
+                renderChart(canvasId, data.chart_data, testName);
+            } else {
+                showNoData(canvasId, testName);
+            }
+        })
+        .catch(error => {
+            console.error(`Error loading ${testName}:`, error);
+            showNoData(canvasId, testName);
+        });
+});
+
+function renderChart(canvasId, chartData, testName) {
+    const ctx = document.getElementById(canvasId);
+    if (!ctx) return;
+
+    // Skip if no data points
+    if (!chartData.datasets || chartData.datasets.length === 0 ||
+        !chartData.datasets[0].data || chartData.datasets[0].data.length === 0) {
+        showNoData(canvasId, testName);
+        return;
+    }
+
+    new Chart(ctx, {
+        type: 'line',
+        data: chartData,
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                title: {
+                    display: true,
+                    text: testName,
+                    font: {
+                        size: 14,
+                        weight: 'bold'
+                    }
+                },
+                legend: {
+                    display: true,
+                    position: 'bottom',
+                    labels: {
+                        boxWidth: 12,
+                        font: {
+                            size: 10
+                        }
+                    }
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false
+                }
+            },
+            scales: {
+                x: {
+                    type: 'time',
+                    time: {
+                        unit: 'month',
+                        displayFormats: {
+                            month: 'MMM yyyy'
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Date',
+                        font: {
+                            size: 11
+                        }
+                    }
+                },
+                y: {
+                    beginAtZero: false,
+                    title: {
+                        display: true,
+                        text: 'Value',
+                        font: {
+                            size: 11
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function showNoData(canvasId, testName) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    canvas.height = 200;
+
+    ctx.fillStyle = '#f0f0f0';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = '#999';
+    ctx.font = '14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`No data for ${testName}`, canvas.width / 2, canvas.height / 2);
+}
+</script>
+{% endblock %}

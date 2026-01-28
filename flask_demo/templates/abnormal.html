@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}Abnormal Results - Blood Work Analysis{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Abnormal Test Results</h2>
+    {% if abnormal|length == 0 %}
+        <div class="alert alert-success">
+            <strong>Great news!</strong> You have no abnormal test results.
+        </div>
+        <p>
+            <a href="/results" class="btn">View All Results</a>
+            <a href="/dashboard" class="btn">Go to Dashboard</a>
+        </p>
+    {% else %}
+        <div class="alert alert-warning">
+            <strong>Attention:</strong> You have {{ abnormal|length }} abnormal test result(s).
+        </div>
+        <p style="margin-bottom: 1rem;">
+            Results shown below are outside the normal reference range. Please consult with your healthcare provider for medical advice.
+        </p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Test Name</th>
+                    <th>Result</th>
+                    <th>Reference Range</th>
+                    <th>Units</th>
+                    <th>Flag</th>
+                    <th>Deviation</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for result in abnormal %}
+                <tr>
+                    <td>{{ result.test_date }}</td>
+                    <td>{{ result.test_name }}</td>
+                    <td><strong>{{ result.result_value }}</strong></td>
+                    <td>{{ result.reference_range.original_text if result.reference_range else '-' }}</td>
+                    <td>{{ result.units or '-' }}</td>
+                    <td>
+                        <span class="badge badge-{{ result.flag|lower }}">{{ result.flag }}</span>
+                    </td>
+                    <td>
+                        {% if result.reference_range %}
+                            {% if result.reference_range.min_value and result.result_value < result.reference_range.min_value %}
+                                {{ "%.1f"|format((result.reference_range.min_value - result.result_value) / result.reference_range.min_value * 100) }}% below min
+                            {% elif result.reference_range.max_value and result.result_value > result.reference_range.max_value %}
+                                {{ "%.1f"|format((result.result_value - result.reference_range.max_value) / result.reference_range.max_value * 100) }}% above max
+                            {% else %}
+                                -
+                            {% endif %}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="/test/{{ result.test_name }}" class="btn" style="padding: 0.25rem 0.75rem; font-size: 0.875rem;">
+                            View Trend
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="card" style="margin-top: 2rem; background: #f9f9f9;">
+            <h3>Important Notice</h3>
+            <p style="color: #666; margin-bottom: 0;">
+                <strong>This information is for reference only and should not be used for medical diagnosis.</strong>
+                Abnormal results may require follow-up testing or medical evaluation. Always consult with your
+                healthcare provider to interpret your blood work results in the context of your overall health.
+            </p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}Upload PDF - Blood Work Analysis{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Upload Blood Work Report</h2>
+    <p style="margin-bottom: 2rem;">
+        Upload a PDF blood work report from LifeLabs. The system will extract all test results
+        and store them in the database.
+    </p>
+
+    <div id="alert-container"></div>
+
+    <form id="upload-form" enctype="multipart/form-data">
+        <div style="margin-bottom: 1rem;">
+            <label for="pdf-file" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
+                Select PDF File
+            </label>
+            <input
+                type="file"
+                id="pdf-file"
+                name="pdf"
+                accept=".pdf"
+                required
+                style="padding: 0.5rem; width: 100%; max-width: 500px;"
+            />
+        </div>
+
+        <button type="submit" class="btn btn-success" id="upload-btn">
+            Upload and Parse
+        </button>
+    </form>
+
+    <div id="loading" style="display: none; margin-top: 2rem;">
+        <p style="font-size: 1.1rem;">
+            <strong>Parsing PDF...</strong>
+        </p>
+        <p style="color: #666;">This may take a few moments.</p>
+    </div>
+
+    <div id="result" style="display: none; margin-top: 2rem;">
+        <h3>Parse Results</h3>
+        <div id="result-content"></div>
+        <div style="margin-top: 1rem;">
+            <a href="/results" class="btn">View All Results</a>
+            <a href="/dashboard" class="btn">Go to Dashboard</a>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h3>Instructions</h3>
+    <ol style="margin-left: 2rem;">
+        <li style="margin: 0.5rem 0;">Select your LifeLabs blood work PDF report</li>
+        <li style="margin: 0.5rem 0;">Click "Upload and Parse" to process the file</li>
+        <li style="margin: 0.5rem 0;">Wait for the parsing to complete (usually takes a few seconds)</li>
+        <li style="margin: 0.5rem 0;">View your results in the dashboard or results page</li>
+    </ol>
+
+    <p style="margin-top: 1rem; padding: 1rem; background: #fff3cd; border-radius: 4px;">
+        <strong>Note:</strong> This demo only supports LifeLabs format. Max file size: 50MB.
+    </p>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('upload-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const formData = new FormData(this);
+    const uploadBtn = document.getElementById('upload-btn');
+    const loading = document.getElementById('loading');
+    const result = document.getElementById('result');
+    const alertContainer = document.getElementById('alert-container');
+
+    // Clear previous alerts
+    alertContainer.innerHTML = '';
+
+    // Disable button and show loading
+    uploadBtn.disabled = true;
+    uploadBtn.textContent = 'Uploading...';
+    loading.style.display = 'block';
+    result.style.display = 'none';
+
+    try {
+        const response = await fetch('/upload', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Show success
+            alertContainer.innerHTML = `
+                <div class="alert alert-success">
+                    ${data.message}
+                </div>
+            `;
+
+            // Show results
+            document.getElementById('result-content').innerHTML = `
+                <p><strong>Total Results:</strong> ${data.num_results}</p>
+                <p><strong>Abnormal Results:</strong> ${data.num_abnormal}</p>
+                ${data.abnormal_tests && data.abnormal_tests.length > 0 ?
+                    `<p><strong>Abnormal Tests:</strong> ${data.abnormal_tests.join(', ')}</p>`
+                    : ''}
+            `;
+            result.style.display = 'block';
+        } else {
+            // Show error
+            alertContainer.innerHTML = `
+                <div class="alert alert-error">
+                    <strong>Error:</strong> ${data.error}
+                </div>
+            `;
+        }
+    } catch (error) {
+        alertContainer.innerHTML = `
+            <div class="alert alert-error">
+                <strong>Error:</strong> ${error.message}
+            </div>
+        `;
+    } finally {
+        // Re-enable button and hide loading
+        uploadBtn.disabled = false;
+        uploadBtn.textContent = 'Upload and Parse';
+        loading.style.display = 'none';
+    }
+});
+</script>
+{% endblock %}

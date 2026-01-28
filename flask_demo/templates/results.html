@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}All Results - Blood Work Analysis{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>All Test Results</h2>
+    {% if results|length == 0 %}
+        <p>No blood work data available yet. <a href="/upload">Upload a PDF report</a> to get started.</p>
+    {% else %}
+        <p style="margin-bottom: 1rem;">
+            Showing {{ results|length }} test results.
+            <a href="/abnormal" class="btn" style="padding: 0.25rem 0.75rem; font-size: 0.875rem;">View Abnormal Only</a>
+        </p>
+
+        <div style="margin-bottom: 1rem;">
+            <input type="text" id="searchInput" placeholder="Search test names..."
+                   style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+        </div>
+
+        <table id="resultsTable">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Test Name</th>
+                    <th>Result</th>
+                    <th>Reference Range</th>
+                    <th>Units</th>
+                    <th>Status</th>
+                    <th>Category</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for result in results %}
+                <tr>
+                    <td>{{ result.date }}</td>
+                    <td>
+                        <a href="/test/{{ result.test_name }}">{{ result.test_name }}</a>
+                    </td>
+                    <td>{{ result.result }}</td>
+                    <td>{{ result.reference_range.original_text if result.reference_range else '-' }}</td>
+                    <td>{{ result.units or '-' }}</td>
+                    <td>
+                        {% if result.is_abnormal %}
+                            <span class="badge badge-{{ result.flag|lower }}">{{ result.flag }}</span>
+                        {% else %}
+                            <span class="badge badge-normal">NORMAL</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span style="font-size: 0.75rem; color: #666;">{{ result.category }}</span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+</div>
+
+<script>
+// Simple search functionality
+document.getElementById('searchInput')?.addEventListener('input', function(e) {
+    const searchTerm = e.target.value.toLowerCase();
+    const rows = document.querySelectorAll('#resultsTable tbody tr');
+
+    rows.forEach(row => {
+        const testName = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
+        if (testName.includes(searchTerm)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+});
+</script>
+{% endblock %}

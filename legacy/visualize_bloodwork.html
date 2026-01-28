@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blood Work Trends - Gregory Koziol</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .file-input {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .file-input input {
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+
+        .file-input button {
+            padding: 10px 30px;
+            font-size: 16px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+
+        .file-input button:hover {
+            background: #45a049;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            background: #e0e0e0;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .tab:hover {
+            background: #d0d0d0;
+        }
+
+        .tab.active {
+            background: #2196F3;
+            color: white;
+        }
+
+        .chart-section {
+            display: none;
+        }
+
+        .chart-section.active {
+            display: block;
+        }
+
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
+            gap: 30px;
+            margin-top: 20px;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .chart-container h3 {
+            margin-bottom: 15px;
+            color: #333;
+            font-size: 18px;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 300px;
+        }
+
+        .summary {
+            margin-top: 30px;
+            padding: 20px;
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            border-radius: 5px;
+        }
+
+        .summary h3 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+
+        .summary ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .summary li {
+            padding: 8px 0;
+            border-bottom: 1px solid #ffeeba;
+            color: #856404;
+        }
+
+        .summary li:last-child {
+            border-bottom: none;
+        }
+
+        .flag-high {
+            color: #d32f2f;
+            font-weight: bold;
+        }
+
+        .flag-low {
+            color: #1976d2;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🩸 Blood Work Trends Visualization</h1>
+        <p class="subtitle">Gregory Koziol - Interactive Health Dashboard</p>
+
+        <div class="file-input">
+            <p style="margin-bottom: 10px; color: #666;">The CSV file should already be loaded. If not, select it below:</p>
+            <input type="file" id="csvFile" accept=".csv">
+            <button onclick="loadAutoCSV()">Auto-Load CSV</button>
+        </div>
+
+        <div class="tabs" id="tabsContainer"></div>
+
+        <div id="chartsContainer"></div>
+
+        <div class="summary" id="summaryContainer" style="display: none;"></div>
+    </div>
+
+    <script>
+        let bloodworkData = [];
+        let abnormalFindings = [];
+
+        // Test categories configuration
+        const categories = {
+            'Lipid Panel': [
+                { name: 'Cholesterol', unit: 'mmol/L', color: '#FF6384' },
+                { name: 'HDL Cholesterol', unit: 'mmol/L', color: '#36A2EB' },
+                { name: 'LDL Cholesterol', unit: 'mmol/L', color: '#FFCE56' },
+                { name: 'Triglyceride', unit: 'mmol/L', color: '#4BC0C0' },
+                { name: 'Cholesterol/HDL Ratio', unit: '', color: '#9966FF' }
+            ],
+            'Liver Function': [
+                { name: 'Alanine Aminotransferase', unit: 'U/L', color: '#FF6384' },
+                { name: 'Gamma Glutamyl Transferase', unit: 'U/L', color: '#36A2EB' },
+                { name: 'Alkaline Phosphatase', unit: 'U/L', color: '#FFCE56' },
+                { name: 'Aspartate Aminotransferase', unit: 'U/L', color: '#4BC0C0' }
+            ],
+            'Blood Count': [
+                { name: 'WBC', unit: 'x E9/L', color: '#FF6384' },
+                { name: 'RBC', unit: 'x E12/L', color: '#36A2EB' },
+                { name: 'Hemoglobin', unit: 'g/L', color: '#FFCE56' },
+                { name: 'Platelet Count', unit: 'x E9/L', color: '#4BC0C0' }
+            ],
+            'Hormones': [
+                { name: 'Testosterone', unit: 'nmol/L', color: '#FF6384' },
+                { name: 'Testosterone Free', unit: 'pmol/L', color: '#36A2EB' },
+                { name: 'Thyroid Stimulating Hormone', unit: 'mIU/L', color: '#FFCE56' },
+                { name: '25-Hydroxy Vitamin D', unit: 'nmol/L', color: '#4BC0C0' }
+            ],
+            'Metabolic': [
+                { name: 'Glucose Fasting', unit: 'mmol/L', color: '#FF6384' },
+                { name: 'Hemoglobin A1C', unit: '%', color: '#36A2EB' },
+                { name: 'Creatinine', unit: 'umol/L', color: '#FFCE56' },
+                { name: 'eGFR', unit: 'mL/min/1.73m2', color: '#4BC0C0' }
+            ],
+            'Inflammation': [
+                { name: 'C Reactive Protein', unit: 'mg/L', color: '#FF6384' },
+                { name: 'Iron', unit: 'umol/L', color: '#36A2EB' },
+                { name: 'Vitamin B12', unit: 'pmol/L', color: '#FFCE56' },
+                { name: 'Transferrin Saturation', unit: '', color: '#4BC0C0' }
+            ]
+        };
+
+        // Auto-load CSV
+        async function loadAutoCSV() {
+            try {
+                const response = await fetch('blood_work_results.csv');
+                const text = await response.text();
+                parseCSV(text);
+            } catch (error) {
+                alert('Could not auto-load CSV. Please select the file manually.');
+            }
+        }
+
+        // Handle file selection
+        document.getElementById('csvFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    parseCSV(e.target.result);
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        function parseCSV(text) {
+            const lines = text.split('\n');
+            const headers = lines[0].split(',');
+
+            bloodworkData = [];
+            abnormalFindings = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                if (lines[i].trim() === '') continue;
+
+                const values = lines[i].split(',');
+                const row = {
+                    date: values[0],
+                    testName: values[1],
+                    result: parseFloat(values[2]),
+                    referenceRange: values[3],
+                    units: values[4],
+                    flag: values[5]
+                };
+
+                bloodworkData.push(row);
+
+                if (row.flag && row.flag.trim() !== '') {
+                    abnormalFindings.push(row);
+                }
+            }
+
+            createVisualization();
+        }
+
+        function parseReferenceRange(rangeStr) {
+            if (!rangeStr) return { min: null, max: null };
+
+            rangeStr = rangeStr.trim();
+
+            if (rangeStr.includes(' - ')) {
+                const parts = rangeStr.split(' - ');
+                return {
+                    min: parseFloat(parts[0]),
+                    max: parseFloat(parts[1])
+                };
+            } else if (rangeStr.startsWith('<')) {
+                return { min: null, max: parseFloat(rangeStr.substring(1)) };
+            } else if (rangeStr.startsWith('>')) {
+                return { min: parseFloat(rangeStr.substring(1)), max: null };
+            } else if (rangeStr.startsWith('>=') || rangeStr.startsWith('=>')) {
+                return { min: parseFloat(rangeStr.substring(2)), max: null };
+            }
+
+            return { min: null, max: null };
+        }
+
+        function createChart(testName, color, canvasId) {
+            const testData = bloodworkData.filter(d => d.testName === testName);
+
+            if (testData.length === 0) return;
+
+            // Sort by date
+            testData.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            const dates = testData.map(d => d.date);
+            const values = testData.map(d => d.result);
+
+            // Get reference range
+            const refRange = parseReferenceRange(testData[0].referenceRange);
+
+            const ctx = document.getElementById(canvasId);
+
+            const datasets = [{
+                label: testName,
+                data: values,
+                borderColor: color,
+                backgroundColor: color + '40',
+                pointBackgroundColor: testData.map(d => d.flag ? '#dc3545' : color),
+                pointBorderColor: testData.map(d => d.flag ? '#dc3545' : color),
+                pointRadius: testData.map(d => d.flag ? 8 : 4),
+                pointHoverRadius: testData.map(d => d.flag ? 10 : 6),
+                tension: 0.3,
+                fill: false
+            }];
+
+            // Add reference range bands
+            if (refRange.min !== null && refRange.max !== null) {
+                datasets.push({
+                    label: 'Normal Range',
+                    data: dates.map(() => refRange.max),
+                    borderColor: '#4caf5080',
+                    backgroundColor: '#4caf5020',
+                    pointRadius: 0,
+                    fill: '+1',
+                    borderDash: [5, 5]
+                });
+                datasets.push({
+                    label: '',
+                    data: dates.map(() => refRange.min),
+                    borderColor: '#4caf5080',
+                    backgroundColor: '#4caf5020',
+                    pointRadius: 0,
+                    fill: false,
+                    borderDash: [5, 5]
+                });
+            }
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const dataIndex = context.dataIndex;
+                                    const test = testData[dataIndex];
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    label += context.parsed.y;
+                                    if (test.flag) {
+                                        label += ' (' + test.flag + ')';
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'month',
+                                displayFormats: {
+                                    month: 'MMM yyyy'
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Date'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: testData[0].units
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createVisualization() {
+            // Create tabs
+            const tabsContainer = document.getElementById('tabsContainer');
+            tabsContainer.innerHTML = '';
+
+            Object.keys(categories).forEach((category, index) => {
+                const tab = document.createElement('button');
+                tab.className = 'tab' + (index === 0 ? ' active' : '');
+                tab.textContent = category;
+                tab.onclick = () => switchTab(category);
+                tabsContainer.appendChild(tab);
+            });
+
+            // Create chart sections
+            const chartsContainer = document.getElementById('chartsContainer');
+            chartsContainer.innerHTML = '';
+
+            Object.entries(categories).forEach(([category, tests], catIndex) => {
+                const section = document.createElement('div');
+                section.className = 'chart-section' + (catIndex === 0 ? ' active' : '');
+                section.id = 'section-' + category.replace(/\s+/g, '-');
+
+                const grid = document.createElement('div');
+                grid.className = 'chart-grid';
+
+                tests.forEach((test, index) => {
+                    const canvasId = 'chart-' + category.replace(/\s+/g, '-') + '-' + index;
+
+                    const container = document.createElement('div');
+                    container.className = 'chart-container';
+                    container.innerHTML = `
+                        <h3>${test.name}</h3>
+                        <div class="chart-wrapper">
+                            <canvas id="${canvasId}"></canvas>
+                        </div>
+                    `;
+
+                    grid.appendChild(container);
+                });
+
+                section.appendChild(grid);
+                chartsContainer.appendChild(section);
+
+                // Create charts after DOM is ready
+                setTimeout(() => {
+                    tests.forEach((test, index) => {
+                        const canvasId = 'chart-' + category.replace(/\s+/g, '-') + '-' + index;
+                        createChart(test.name, test.color, canvasId);
+                    });
+                }, 100);
+            });
+
+            // Show summary
+            showSummary();
+        }
+
+        function switchTab(category) {
+            // Update tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+                if (tab.textContent === category) {
+                    tab.classList.add('active');
+                }
+            });
+
+            // Update sections
+            document.querySelectorAll('.chart-section').forEach(section => {
+                section.classList.remove('active');
+                if (section.id === 'section-' + category.replace(/\s+/g, '-')) {
+                    section.classList.add('active');
+                }
+            });
+        }
+
+        function showSummary() {
+            const summaryContainer = document.getElementById('summaryContainer');
+
+            if (abnormalFindings.length === 0) {
+                summaryContainer.style.display = 'none';
+                return;
+            }
+
+            summaryContainer.style.display = 'block';
+
+            let html = '<h3>⚠️ Abnormal Findings</h3><ul>';
+
+            abnormalFindings.forEach(finding => {
+                const flagClass = finding.flag === 'HI' ? 'flag-high' : 'flag-low';
+                html += `<li><strong>${finding.testName}</strong> (${finding.date}): ${finding.result} ${finding.units} <span class="${flagClass}">${finding.flag}</span> - Normal: ${finding.referenceRange}</li>`;
+            });
+
+            html += '</ul>';
+            summaryContainer.innerHTML = html;
+        }
+
+        // Auto-load on page load
+        window.onload = loadAutoCSV;
+    </script>
+</body>
+</html>

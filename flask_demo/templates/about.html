@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}About - Blood Work Analysis{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>About This Demo</h2>
+    <p style="margin-bottom: 1rem;">
+        This is a demonstration application showing how to integrate the <strong>bloodwork</strong> Python package
+        into a Flask web application.
+    </p>
+
+    <h3>Technology Stack</h3>
+    <ul style="margin: 1rem 0; margin-left: 2rem;">
+        <li><strong>Backend:</strong> Flask (Python web framework)</li>
+        <li><strong>Blood Work Package:</strong> bloodwork (framework-agnostic analysis library)</li>
+        <li><strong>Database:</strong> SQLite (demo) - use PostgreSQL/MySQL in production</li>
+        <li><strong>Frontend:</strong> HTML, CSS, Vanilla JavaScript</li>
+    </ul>
+
+    <h3>Features</h3>
+    <ul style="margin: 1rem 0; margin-left: 2rem;">
+        <li>Upload and parse LifeLabs PDF reports</li>
+        <li>Store results in database</li>
+        <li>View all test results with filtering</li>
+        <li>Identify abnormal tests</li>
+        <li>Trend analysis over time</li>
+        <li>Dashboard with visualizations</li>
+    </ul>
+
+    <h3>Package Architecture</h3>
+    <p>The bloodwork package uses a modular architecture:</p>
+    <ul style="margin: 1rem 0; margin-left: 2rem;">
+        <li><strong>Models:</strong> Pydantic data models with validation</li>
+        <li><strong>Parsers:</strong> PDF extraction (table + text patterns)</li>
+        <li><strong>Repositories:</strong> Database storage (SQLAlchemy)</li>
+        <li><strong>Services:</strong> Business logic (parsing, analysis, visualization)</li>
+    </ul>
+
+    <h3>Production Considerations</h3>
+    <p>This is a demo application. For production use, you should:</p>
+    <ul style="margin: 1rem 0; margin-left: 2rem;">
+        <li>Use PostgreSQL or MySQL instead of SQLite</li>
+        <li>Implement proper authentication (JWT, OAuth, etc.)</li>
+        <li>Add HTTPS and security headers</li>
+        <li>Implement HIPAA-compliant PHI handling</li>
+        <li>Add role-based access control</li>
+        <li>Implement audit logging</li>
+        <li>Add data encryption at rest</li>
+        <li>Set up proper backups</li>
+    </ul>
+</div>
+
+<div class="card">
+    <h3>Source Code</h3>
+    <p>
+        The bloodwork package is open source. View the code and documentation on GitHub.
+    </p>
+    <p style="margin-top: 1rem;">
+        <a href="https://github.com/yourusername/bloodwork" class="btn">View on GitHub</a>
+    </p>
+</div>
+{% endblock %}

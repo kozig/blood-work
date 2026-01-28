@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}{{ test_name }} - Blood Work Analysis{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>{{ test_name }}</h2>
+
+    {% if trend.results|length == 0 %}
+        <p>No data available for this test.</p>
+        <a href="/results" class="btn">Back to Results</a>
+    {% else %}
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+            <div style="background: #e8f4f8; padding: 1rem; border-radius: 8px;">
+                <h4 style="margin: 0 0 0.5rem 0; font-size: 0.875rem; color: #666;">Category</h4>
+                <p style="margin: 0; font-weight: 600;">{{ trend.category }}</p>
+            </div>
+            <div style="background: #fef6e8; padding: 1rem; border-radius: 8px;">
+                <h4 style="margin: 0 0 0.5rem 0; font-size: 0.875rem; color: #666;">Latest Value</h4>
+                <p style="margin: 0; font-weight: 600;">{{ trend.latest_result }} {{ trend.units or '' }}</p>
+            </div>
+            <div style="background: #f0e8f8; padding: 1rem; border-radius: 8px;">
+                <h4 style="margin: 0 0 0.5rem 0; font-size: 0.875rem; color: #666;">Trend</h4>
+                <p style="margin: 0; font-weight: 600; text-transform: capitalize;">
+                    {% if trend.trend == 'improving' %}
+                        <span style="color: #28a745;">↗ Improving</span>
+                    {% elif trend.trend == 'worsening' %}
+                        <span style="color: #dc3545;">↘ Worsening</span>
+                    {% elif trend.trend == 'stable' %}
+                        <span style="color: #6c757d;">→ Stable</span>
+                    {% else %}
+                        <span style="color: #666;">{{ trend.trend }}</span>
+                    {% endif %}
+                </p>
+            </div>
+            <div style="background: #e8f8f0; padding: 1rem; border-radius: 8px;">
+                <h4 style="margin: 0 0 0.5rem 0; font-size: 0.875rem; color: #666;">Data Points</h4>
+                <p style="margin: 0; font-weight: 600;">{{ trend.results|length }}</p>
+            </div>
+        </div>
+
+        {% if trend.reference_range %}
+        <div class="alert alert-info" style="background: #e8f4f8; border-left: 4px solid #007bff;">
+            <strong>Reference Range:</strong> {{ trend.reference_range.original_text }}
+        </div>
+        {% endif %}
+
+        <h3>Historical Data</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Result</th>
+                    <th>Units</th>
+                    <th>Status</th>
+                    <th>Change from Previous</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for result in trend.results %}
+                <tr>
+                    <td>{{ result.date }}</td>
+                    <td><strong>{{ result.result }}</strong></td>
+                    <td>{{ result.units or '-' }}</td>
+                    <td>
+                        {% if result.is_abnormal %}
+                            <span class="badge badge-{{ result.flag|lower }}">{{ result.flag }}</span>
+                        {% else %}
+                            <span class="badge badge-normal">NORMAL</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if not loop.last %}
+                            {% set prev_result = trend.results[loop.index] %}
+                            {% set change = result.result - prev_result.result %}
+                            {% if change > 0 %}
+                                <span style="color: #007bff;">+{{ "%.2f"|format(change) }}</span>
+                            {% elif change < 0 %}
+                                <span style="color: #dc3545;">{{ "%.2f"|format(change) }}</span>
+                            {% else %}
+                                <span style="color: #6c757d;">No change</span>
+                            {% endif %}
+                        {% else %}
+                            <span style="color: #999;">-</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Chart placeholder - frontend would render chart here using Chart.js -->
+        <div class="card" style="margin-top: 2rem;">
+            <h3>Trend Visualization</h3>
+            <div id="chartContainer" style="height: 400px; display: flex; align-items: center; justify-content: center; background: #f9f9f9; border: 2px dashed #ddd; border-radius: 8px;">
+                <div style="text-align: center; color: #666;">
+                    <p style="margin: 0 0 1rem 0; font-size: 1.25rem;">📊</p>
+                    <p style="margin: 0;">Chart visualization would appear here</p>
+                    <p style="margin: 0.5rem 0 0 0; font-size: 0.875rem;">Use <code>/api/visualize/{{ test_name }}</code> endpoint to get Chart.js data</p>
+                </div>
+            </div>
+        </div>
+
+        <script>
+        // Example: Fetch and render chart data
+        // In a production app, you would use Chart.js or similar library here
+        /*
+        fetch('/api/visualize/{{ test_name }}')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Render chart using data.chart_data
+                    console.log('Chart data:', data.chart_data);
+                }
+            });
+        */
+        </script>
+
+        <div style="margin-top: 2rem;">
+            <a href="/results" class="btn">Back to All Results</a>
+            <a href="/dashboard" class="btn">Go to Dashboard</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

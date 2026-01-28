@@ -1,0 +1,54 @@
+# Python virtual environment
+venv/
+env/
+ENV/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.mypy_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+*.egg
+
+# Generated output files
+blood_work_extracted.csv
+blood_work_trends.png
+blood_work_trends.pdf
+
+# PDF reports (may contain sensitive health data)
+*.pdf
+
+# CSV data files (may contain sensitive health data)
+blood_work_results.csv
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# IDE files
+.vscode/
+.idea/
+*.iml
+
+# Vim swap files
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test files
+test_*.pdf
+test_*.csv
