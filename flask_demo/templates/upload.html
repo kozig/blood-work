@@ -73,6 +73,22 @@
 
 {% block extra_js %}
 <script>
+    async function resetData() {
+      if (!confirm('Delete all blood work data? This cannot be undone.')) return;
+      const btn = document.getElementById('reset-btn');
+      const status = document.getElementById('reset-status');
+      btn.disabled = true;
+      try {
+          const resp = await fetch('/reset', { method: 'POST'});
+          const data = await resp.json();
+          status.textContent = data.success ? 'Data reset successfully.' : data.error;
+      } catch (e) {
+          status.textContent = 'Reset failed: ' + e.message;
+      } finally {
+          btn.disabled = false;
+      }
+  }
+
 document.getElementById('upload-form').addEventListener('submit', async function(e) {
     e.preventDefault();
 
@@ -91,21 +107,6 @@ document.getElementById('upload-form').addEventListener('submit', async function
     loading.style.display = 'block';
     result.style.display = 'none';
 
-    async function resetData() {
-      if (!confirm('Delete all blood work data? This cannot be undone.')) return;
-      const btn = document.getElementById('reset-btn');
-      const status = document.getElementById('reset-status');
-      btn.disabled = true;
-      try {
-          const resp = await fetch('/reset', { method: 'POST'});
-          const data = await resp.json();
-          status.textContent = data.success ? 'Data reset successfully.' : data.error;
-      } catch (e) {
-          status.textContent = 'Reset failed: ' + e.message;
-      } finally {
-          btn.disabled = false;
-      }
-  }
     try {
         const response = await fetch('/upload', {
             method: 'POST',
