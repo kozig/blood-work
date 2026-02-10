@@ -199,37 +199,6 @@ class DatabaseRepository(AbstractRepository):
             except SQLAlchemyError as e:
                 raise RepositoryError(f"Failed to retrieve test results: {e}")
 
-
-    def get_abnormal_results(
-        self,
-        patient_id: str,
-        start_date: Optional[date] = None,
-        end_date: Optional[date] = None
-    ) -> List[BloodTestResult]:
-        """Retrieve abnormal blood test results."""
-        with self.SessionLocal() as session:
-            try:
-                stmt = select(BloodTestResultORM).where(
-                    and_(
-                        BloodTestResultORM.patient_id == patient_id,
-                        BloodTestResultORM.flag.in_(["HIGH", "LOW"])
-                    )
-                )
-
-                if start_date:
-                    stmt = stmt.where(BloodTestResultORM.test_date >= start_date)
-                if end_date:
-                    stmt = stmt.where(BloodTestResultORM.test_date <= end_date)
-
-                stmt = stmt.order_by(BloodTestResultORM.test_date.desc())
-
-                results_orm = session.execute(stmt).scalars().all()
-
-                return [self._orm_to_model(r) for r in results_orm]
-
-            except SQLAlchemyError as e:
-                raise RepositoryError(f"Failed to retrieve abnormal results: {e}")
-
     def get_abnormal_results(
         self,
         patient_id: str,
@@ -317,13 +286,8 @@ class DatabaseRepository(AbstractRepository):
 
             except SQLAlchemyError as e:
                 session.rollback()
-            result_value=orm.result_value,
-            result_raw=orm.result_raw,
-            reference_range=reference_range,
-            units=orm.units,
-            flag=orm.flag,
-            created_at=orm.created_at()
-
+                raise RepositoryError(f"Failed to delete patient data: {e}")
+        
     def _orm_to_model(self, orm: BloodTestResultORM) -> BloodTestResult:
         """Convert ORM object to Pydantic model."""
         reference_range = ReferenceRange(
@@ -344,4 +308,3 @@ class DatabaseRepository(AbstractRepository):
             flag=orm.flag,
             created_at=orm.created_at
         )
-
