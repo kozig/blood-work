@@ -20,6 +20,7 @@ from bloodwork import (
 # Initialize Flask app
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(16))
+app.config['PREFFERED_URL_SCHEME'] = 'https'
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max file size
 app.config['UPLOAD_FOLDER'] = 'uploads'
 
@@ -239,6 +240,16 @@ def about():
     """About page."""
     return render_template('about.html')
 
+@app.route('/reset', methods=['POST'])
+def reset_data():
+  """Reset all blood work data for current user."""
+  try:
+      user_id = get_current_user_id()
+      repo = get_repository()
+      repo.delete_patient_data(user_id)
+      return jsonify({'success': True, 'message': 'All data has been reset.'})
+  except Exception as e:
+      return jsonify({'success': False, 'error': str(e)}),400
 
 # Error handlers
 
@@ -265,4 +276,4 @@ if __name__ == '__main__':
     print("\nStarting server at http://localhost:5000")
     print("=" * 60)
 
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=False, host='0.0.0.0', port=5000)
