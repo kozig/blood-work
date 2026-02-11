@@ -85,31 +85,76 @@
             </tbody>
         </table>
 
-        <!-- Chart placeholder - frontend would render chart here using Chart.js -->
         <div class="card" style="margin-top: 2rem;">
             <h3>Trend Visualization</h3>
-            <div id="chartContainer" style="height: 400px; display: flex; align-items: center; justify-content: center; background: #f9f9f9; border: 2px dashed #ddd; border-radius: 8px;">
-                <div style="text-align: center; color: #666;">
-                    <p style="margin: 0 0 1rem 0; font-size: 1.25rem;">📊</p>
-                    <p style="margin: 0;">Chart visualization would appear here</p>
-                    <p style="margin: 0.5rem 0 0 0; font-size: 0.875rem;">Use <code>/api/visualize/{{ test_name }}</code> endpoint to get Chart.js data</p>
-                </div>
+            <div id="chartContainer" style="position: relative; height: 400px;">
+                <canvas id="trendChart"></canvas>
             </div>
+            <p id="chartError" style="display: none; text-align: center; color: #999; padding: 2rem;">
+                Unable to load chart data.
+            </p>
         </div>
 
         <script>
-        // Example: Fetch and render chart data
-        // In a production app, you would use Chart.js or similar library here
-        /*
-        fetch('/api/visualize/{{ test_name }}')
+        fetch('/api/visualize/{{ test_name | urlencode }}')
             .then(response => response.json())
             .then(data => {
-                if (data.success) {
-                    // Render chart using data.chart_data
-                    console.log('Chart data:', data.chart_data);
+                if (!data.success || !data.chart_data || !data.chart_data.labels || data.chart_data.labels.length === 0) {
+                    document.getElementById('chartContainer').style.display = 'none';
+                    document.getElementById('chartError').style.display = 'block';
+                    return;
                 }
+
+                const chartData = data.chart_data;
+                const ctx = document.getElementById('trendChart').getContext('2d');
+
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: chartData.labels,
+                        datasets: chartData.datasets
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            intersect: false,
+                            mode: 'index'
+                        },
+                        scales: {
+                            x: {
+                                type: 'time',
+                                time: {
+                                    parser: 'yyyy-MM-dd',
+                                    tooltipFormat: 'MMM d, yyyy',
+                                    unit: 'month'
+                                },
+                                title: { display: true, text: 'Date' }
+                            },
+                            y: {
+                                title: { display: true, text: '{{ trend.results[-1].units or "Value" }}' }
+                            }
+                        },
+                        plugins: {
+                            legend: { display: chartData.datasets.length > 1 },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) label += ': ';
+                                        label += context.parsed.y;
+                                        return label;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            })
+            .catch(() => {
+                document.getElementById('chartContainer').style.display = 'none';
+                document.getElementById('chartError').style.display = 'block';
             });
-        */
         </script>
 
         <div style="margin-top: 2rem;">
