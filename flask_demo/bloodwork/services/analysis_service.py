@@ -56,6 +56,10 @@ class TrendData:
         # Simple linear trend based on first and last values
         first_value = self.values[0]
         last_value = self.values[-1]
+
+        if first_value == 0:
+            return "stable" if last_value == 0 else "increasing"
+
         change_percent = ((last_value - first_value) / first_value) * 100
 
         # Consider reference range if available
