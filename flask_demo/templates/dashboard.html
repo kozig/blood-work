@@ -98,11 +98,12 @@
     <p style="color: #666; margin-bottom: 2rem;">Interactive charts showing your test results over time. Click on test names to see detailed analysis.</p>
 
     {% for category, tests in test_categories.items() %}
+    {% set outer_index = loop.index %}
     <h3 style="margin-top: 2rem; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">{{ category.replace('_', ' ').title() }}</h3>
     <div class="chart-grid">
         {% for test_name in tests %}
         <div class="chart-container">
-            <canvas id="chart-{{ loop.parent.loop.index }}-{{ loop.index }}"></canvas>
+            <canvas id="chart-{{ outer_index }}-{{ loop.index }}"></canvas>
             <a href="/test/{{ test_name }}" class="chart-link">{{ test_name }} - View Details</a>
         </div>
         {% endfor %}
@@ -150,9 +151,10 @@
 // Build chart list from server-rendered data
 const charts = [];
 {% for category, tests in test_categories.items() %}
+{% set outer_index = loop.index %}
 {% for test_name in tests %}
 charts.push({
-    canvasId: 'chart-{{ loop.parent.loop.index }}-{{ loop.index }}',
+    canvasId: 'chart-{{ outer_index }}-{{ loop.index }}',
     testName: {{ test_name | tojson }}
 });
 {% endfor %}
