@@ -115,10 +115,7 @@ def results():
         # Get all results
         all_results = repo.get_results(user_id)
 
-        # Convert to dict for JSON
-        results_data = [r.to_dict() for r in all_results]
-
-        return render_template('results.html', results=results_data)
+        return render_template('results.html', results=all_results)
 
     except Exception as e:
         return render_template('error.html', error=str(e))

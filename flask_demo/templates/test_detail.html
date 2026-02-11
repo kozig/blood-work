@@ -11,13 +11,9 @@
         <a href="/results" class="btn">Back to Results</a>
     {% else %}
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
-            <div style="background: #e8f4f8; padding: 1rem; border-radius: 8px;">
-                <h4 style="margin: 0 0 0.5rem 0; font-size: 0.875rem; color: #666;">Category</h4>
-                <p style="margin: 0; font-weight: 600;">{{ trend.category }}</p>
-            </div>
             <div style="background: #fef6e8; padding: 1rem; border-radius: 8px;">
                 <h4 style="margin: 0 0 0.5rem 0; font-size: 0.875rem; color: #666;">Latest Value</h4>
-                <p style="margin: 0; font-weight: 600;">{{ trend.latest_result }} {{ trend.units or '' }}</p>
+                <p style="margin: 0; font-weight: 600;">{{ trend.values[-1] }} {{ trend.results[-1].units or '' }}</p>
             </div>
             <div style="background: #f0e8f8; padding: 1rem; border-radius: 8px;">
                 <h4 style="margin: 0 0 0.5rem 0; font-size: 0.875rem; color: #666;">Trend</h4>
@@ -39,9 +35,9 @@
             </div>
         </div>
 
-        {% if trend.reference_range %}
+        {% if trend.results[0].reference_range %}
         <div class="alert alert-info" style="background: #e8f4f8; border-left: 4px solid #007bff;">
-            <strong>Reference Range:</strong> {{ trend.reference_range.original_text }}
+            <strong>Reference Range:</strong> {{ trend.results[0].reference_range.original_text }}
         </div>
         {% endif %}
 
@@ -59,11 +55,11 @@
             <tbody>
                 {% for result in trend.results %}
                 <tr>
-                    <td>{{ result.date }}</td>
-                    <td><strong>{{ result.result }}</strong></td>
+                    <td>{{ result.test_date }}</td>
+                    <td><strong>{{ result.result_value }}</strong></td>
                     <td>{{ result.units or '-' }}</td>
                     <td>
-                        {% if result.is_abnormal %}
+                        {% if result.is_abnormal() %}
                             <span class="badge badge-{{ result.flag|lower }}">{{ result.flag }}</span>
                         {% else %}
                             <span class="badge badge-normal">NORMAL</span>
@@ -72,7 +68,7 @@
                     <td>
                         {% if not loop.last %}
                             {% set prev_result = trend.results[loop.index] %}
-                            {% set change = result.result - prev_result.result %}
+                            {% set change = result.result_value - prev_result.result_value %}
                             {% if change > 0 %}
                                 <span style="color: #007bff;">+{{ "%.2f"|format(change) }}</span>
                             {% elif change < 0 %}
