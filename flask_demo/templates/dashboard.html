@@ -148,6 +148,9 @@
 
 {% block extra_js %}
 <script>
+// All chart data embedded server-side (no individual API calls needed)
+const allChartData = {{ chart_data_json | safe }};
+
 // Build chart list from server-rendered data
 const charts = [];
 {% for category, tests in test_categories.items() %}
@@ -160,20 +163,14 @@ charts.push({
 {% endfor %}
 {% endfor %}
 
-// Load and render all charts
+// Render all charts from embedded data
 charts.forEach(({ canvasId, testName }) => {
-    fetch(`/api/visualize/${encodeURIComponent(testName)}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success && data.chart_data && data.chart_data.labels && data.chart_data.labels.length > 0) {
-                renderChart(canvasId, data.chart_data, testName);
-            } else {
-                showNoData(canvasId, testName);
-            }
-        })
-        .catch(() => {
-            showNoData(canvasId, testName);
-        });
+    const chartData = allChartData[testName];
+    if (chartData && chartData.labels && chartData.labels.length > 0) {
+        renderChart(canvasId, chartData, testName);
+    } else {
+        showNoData(canvasId, testName);
+    }
 });
 
 function renderChart(canvasId, chartData, testName) {

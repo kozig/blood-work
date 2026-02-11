@@ -189,16 +189,27 @@ def dashboard():
         # Get dashboard data
         dashboard_data = viz_service.generate_summary_dashboard(user_id)
 
-        # Get actual test names grouped by category for chart rendering
+        # Get actual test names grouped by category, with chart data pre-generated
         from bloodwork.models import TestCategory
         from collections import OrderedDict
+        import json
         test_names = repo.get_unique_test_names(user_id)
         categories = OrderedDict()
+        all_chart_data = {}
         for name in test_names:
             cat = TestCategory.categorize_test(name)
             categories.setdefault(cat.value, []).append(name)
+            try:
+                all_chart_data[name] = viz_service.export_to_chartjs_format(user_id, name)
+            except Exception:
+                all_chart_data[name] = {}
 
-        return render_template('dashboard.html', dashboard=dashboard_data, test_categories=categories)
+        return render_template(
+            'dashboard.html',
+            dashboard=dashboard_data,
+            test_categories=categories,
+            chart_data_json=json.dumps(all_chart_data)
+        )
 
     except Exception as e:
         return render_template('error.html', error=str(e))
