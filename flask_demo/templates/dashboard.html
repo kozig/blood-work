@@ -92,136 +92,22 @@
 </div>
 {% endif %}
 
-{% if dashboard.statistics.total_results > 0 %}
+{% if dashboard.statistics.total_results > 0 and test_categories %}
 <div class="card">
     <h2>Blood Work Trends</h2>
     <p style="color: #666; margin-bottom: 2rem;">Interactive charts showing your test results over time. Click on test names to see detailed analysis.</p>
 
-    <!-- Lipid Panel -->
-    <h3 style="margin-top: 2rem; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">Lipid Panel</h3>
+    {% for category, tests in test_categories.items() %}
+    <h3 style="margin-top: 2rem; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">{{ category.replace('_', ' ').title() }}</h3>
     <div class="chart-grid">
+        {% for test_name in tests %}
         <div class="chart-container">
-            <canvas id="chart-Cholesterol"></canvas>
-            <a href="/test/Cholesterol" class="chart-link">View Details</a>
+            <canvas id="chart-{{ loop.parent.loop.index }}-{{ loop.index }}"></canvas>
+            <a href="/test/{{ test_name }}" class="chart-link">{{ test_name }} - View Details</a>
         </div>
-        <div class="chart-container">
-            <canvas id="chart-HDL-Cholesterol"></canvas>
-            <a href="/test/HDL Cholesterol" class="chart-link">View Details</a>
-        </div>
-        <div class="chart-container">
-            <canvas id="chart-LDL-Cholesterol"></canvas>
-            <a href="/test/LDL Cholesterol" class="chart-link">View Details</a>
-        </div>
-        <div class="chart-container">
-            <canvas id="chart-Triglyceride"></canvas>
-            <a href="/test/Triglyceride" class="chart-link">View Details</a>
-        </div>
+        {% endfor %}
     </div>
-
-    <!-- Liver Function -->
-    <h3 style="margin-top: 2rem; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">Liver Function</h3>
-    <div class="chart-grid">
-        <div class="chart-container">
-            <canvas id="chart-ALT"></canvas>
-            <a href="/test/Alanine Aminotransferase" class="chart-link">View Details</a>
-        </div>
-        <div class="chart-container">
-            <canvas id="chart-GGT"></canvas>
-            <a href="/test/Gamma Glutamyl Transferase" class="chart-link">View Details</a>
-        </div>
-        <div class="chart-container">
-            <canvas id="chart-ALP"></canvas>
-            <a href="/test/Alkaline Phosphatase" class="chart-link">View Details</a>
-        </div>
-        <div class="chart-container">
-            <canvas id="chart-AST"></canvas>
-            <a href="/test/Aspartate Aminotransferase" class="chart-link">View Details</a>
-        </div>
-    </div>
-
-    <!-- Complete Blood Count -->
-    <h3 style="margin-top: 2rem; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">Complete Blood Count</h3>
-    <div class="chart-grid">
-        <div class="chart-container">
-            <canvas id="chart-WBC"></canvas>
-            <a href="/test/WBC" class="chart-link">View Details</a>
-        </div>
-        <div class="chart-container">
-            <canvas id="chart-RBC"></canvas>
-            <a href="/test/RBC" class="chart-link">View Details</a>
-        </div>
-        <div class="chart-container">
-            <canvas id="chart-Hemoglobin"></canvas>
-            <a href="/test/Hemoglobin" class="chart-link">View Details</a>
-        </div>
-        <div class="chart-container">
-            <canvas id="chart-Platelet-Count"></canvas>
-            <a href="/test/Platelet Count" class="chart-link">View Details</a>
-        </div>
-    </div>
-
-    <!-- Hormones -->
-    <h3 style="margin-top: 2rem; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">Hormones</h3>
-    <div class="chart-grid">
-        <div class="chart-container">
-            <canvas id="chart-Testosterone"></canvas>
-            <a href="/test/Testosterone" class="chart-link">View Details</a>
-        </div>
-        <div class="chart-container">
-            <canvas id="chart-Free-Testosterone"></canvas>
-            <a href="/test/Testosterone Free" class="chart-link">View Details</a>
-        </div>
-        <div class="chart-container">
-            <canvas id="chart-TSH"></canvas>
-            <a href="/test/Thyroid Stimulating Hormone" class="chart-link">View Details</a>
-        </div>
-        <div class="chart-container">
-            <canvas id="chart-Vitamin-D"></canvas>
-            <a href="/test/25-Hydroxy Vitamin D" class="chart-link">View Details</a>
-        </div>
-    </div>
-
-    <!-- Metabolic Panel -->
-    <h3 style="margin-top: 2rem; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">Metabolic Panel</h3>
-    <div class="chart-grid">
-        <div class="chart-container">
-            <canvas id="chart-Glucose"></canvas>
-            <a href="/test/Glucose Fasting" class="chart-link">View Details</a>
-        </div>
-        <div class="chart-container">
-            <canvas id="chart-HbA1C"></canvas>
-            <a href="/test/Hemoglobin A1C" class="chart-link">View Details</a>
-        </div>
-        <div class="chart-container">
-            <canvas id="chart-Creatinine"></canvas>
-            <a href="/test/Creatinine" class="chart-link">View Details</a>
-        </div>
-        <div class="chart-container">
-            <canvas id="chart-eGFR"></canvas>
-            <a href="/test/eGFR" class="chart-link">View Details</a>
-        </div>
-    </div>
-
-    <!-- Inflammation & Other -->
-    <h3 style="margin-top: 2rem; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">Inflammation & Other</h3>
-    <div class="chart-grid">
-        <div class="chart-container">
-            <canvas id="chart-CRP"></canvas>
-            <a href="/test/C Reactive Protein" class="chart-link">View Details</a>
-        </div>
-        <div class="chart-container">
-            <canvas id="chart-Iron"></canvas>
-            <a href="/test/Iron" class="chart-link">View Details</a>
-        </div>
-        <div class="chart-container">
-            <canvas id="chart-B12"></canvas>
-            <a href="/test/Vitamin B12" class="chart-link">View Details</a>
-        </div>
-        <div class="chart-container">
-            <canvas id="chart-Transferrin"></canvas>
-            <a href="/test/Transferrin Saturation" class="chart-link">View Details</a>
-        </div>
-    </div>
+    {% endfor %}
 </div>
 {% endif %}
 {% endblock %}
@@ -261,50 +147,29 @@
 
 {% block extra_js %}
 <script>
-// Test mappings: canvas ID -> actual test name in database
-const testMappings = {
-    'Cholesterol': 'Cholesterol',
-    'HDL-Cholesterol': 'HDL Cholesterol',
-    'LDL-Cholesterol': 'LDL Cholesterol',
-    'Triglyceride': 'Triglyceride',
-    'ALT': 'Alanine Aminotransferase',
-    'GGT': 'Gamma Glutamyl Transferase',
-    'ALP': 'Alkaline Phosphatase',
-    'AST': 'Aspartate Aminotransferase',
-    'WBC': 'WBC',
-    'RBC': 'RBC',
-    'Hemoglobin': 'Hemoglobin',
-    'Platelet-Count': 'Platelet Count',
-    'Testosterone': 'Testosterone',
-    'Free-Testosterone': 'Testosterone Free',
-    'TSH': 'Thyroid Stimulating Hormone',
-    'Vitamin-D': '25-Hydroxy Vitamin D',
-    'Glucose': 'Glucose Fasting',
-    'HbA1C': 'Hemoglobin A1C',
-    'Creatinine': 'Creatinine',
-    'eGFR': 'eGFR',
-    'CRP': 'C Reactive Protein',
-    'Iron': 'Iron',
-    'B12': 'Vitamin B12',
-    'Transferrin': 'Transferrin Saturation'
-};
+// Build chart list from server-rendered data
+const charts = [];
+{% for category, tests in test_categories.items() %}
+{% for test_name in tests %}
+charts.push({
+    canvasId: 'chart-{{ loop.parent.loop.index }}-{{ loop.index }}',
+    testName: {{ test_name | tojson }}
+});
+{% endfor %}
+{% endfor %}
 
 // Load and render all charts
-Object.keys(testMappings).forEach(chartId => {
-    const testName = testMappings[chartId];
-    const canvasId = `chart-${chartId}`;
-
+charts.forEach(({ canvasId, testName }) => {
     fetch(`/api/visualize/${encodeURIComponent(testName)}`)
         .then(response => response.json())
         .then(data => {
-            if (data.success && data.chart_data) {
+            if (data.success && data.chart_data && data.chart_data.labels && data.chart_data.labels.length > 0) {
                 renderChart(canvasId, data.chart_data, testName);
             } else {
                 showNoData(canvasId, testName);
             }
         })
-        .catch(error => {
-            console.error(`Error loading ${testName}:`, error);
+        .catch(() => {
             showNoData(canvasId, testName);
         });
 });
@@ -312,13 +177,6 @@ Object.keys(testMappings).forEach(chartId => {
 function renderChart(canvasId, chartData, testName) {
     const ctx = document.getElementById(canvasId);
     if (!ctx) return;
-
-    // Skip if no data points
-    if (!chartData.datasets || chartData.datasets.length === 0 ||
-        !chartData.datasets[0].data || chartData.datasets[0].data.length === 0) {
-        showNoData(canvasId, testName);
-        return;
-    }
 
     new Chart(ctx, {
         type: 'line',
@@ -330,20 +188,12 @@ function renderChart(canvasId, chartData, testName) {
                 title: {
                     display: true,
                     text: testName,
-                    font: {
-                        size: 14,
-                        weight: 'bold'
-                    }
+                    font: { size: 14, weight: 'bold' }
                 },
                 legend: {
-                    display: true,
+                    display: chartData.datasets.length > 1,
                     position: 'bottom',
-                    labels: {
-                        boxWidth: 12,
-                        font: {
-                            size: 10
-                        }
-                    }
+                    labels: { boxWidth: 12, font: { size: 10 } }
                 },
                 tooltip: {
                     mode: 'index',
@@ -354,28 +204,16 @@ function renderChart(canvasId, chartData, testName) {
                 x: {
                     type: 'time',
                     time: {
+                        parser: 'yyyy-MM-dd',
                         unit: 'month',
-                        displayFormats: {
-                            month: 'MMM yyyy'
-                        }
+                        displayFormats: { month: 'MMM yyyy' },
+                        tooltipFormat: 'MMM d, yyyy'
                     },
-                    title: {
-                        display: true,
-                        text: 'Date',
-                        font: {
-                            size: 11
-                        }
-                    }
+                    title: { display: true, text: 'Date', font: { size: 11 } }
                 },
                 y: {
                     beginAtZero: false,
-                    title: {
-                        display: true,
-                        text: 'Value',
-                        font: {
-                            size: 11
-                        }
-                    }
+                    title: { display: true, text: 'Value', font: { size: 11 } }
                 }
             }
         }

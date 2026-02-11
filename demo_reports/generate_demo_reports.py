@@ -174,8 +174,13 @@ PATIENT = {
     "dob": "Jan 15 1985",
 }
 
-# Report dates (spread across time for trend visualization)
+# Report dates (10 reports across ~5 years for rich trend data)
 REPORT_DATES = [
+    "Dec 10 2020",
+    "Jun 15 2021",
+    "Dec 08 2021",
+    "Jun 20 2022",
+    "Dec 12 2022",
     "Jun 15 2023",
     "Dec 10 2023",
     "Jun 20 2024",
@@ -204,19 +209,30 @@ BASE = {
     "glucose_fasting": 5.0,
 }
 
-# Trends: simulate gradual changes over time
-# Report 1-5 modifications (some values improving, some worsening)
+# Trends: simulate gradual changes over 10 reports
+# Story: Patient starts with elevated GGT and low Vitamin D/HDL,
+# gradually improves over 5 years with seasonal Vitamin D fluctuation
 TRENDS = [
-    # Report 1 (Jun 2023) - baseline, slightly elevated GGT, low vitamin D
-    {"ggt_mult": 1.6, "vitamin_d_mult": 0.75, "hdl_mult": 0.88, "b12_mult": 1.1},
-    # Report 2 (Dec 2023) - GGT still high, vitamin D lower (winter)
-    {"ggt_mult": 1.8, "vitamin_d_mult": 0.70, "hdl_mult": 0.90, "b12_mult": 1.0},
-    # Report 3 (Jun 2024) - GGT improving, vitamin D recovering
-    {"ggt_mult": 1.3, "vitamin_d_mult": 0.95, "hdl_mult": 0.95, "b12_mult": 0.95},
-    # Report 4 (Dec 2024) - GGT near normal, vitamin D dips again
-    {"ggt_mult": 1.1, "vitamin_d_mult": 0.80, "hdl_mult": 1.0, "b12_mult": 0.90},
-    # Report 5 (Jun 2025) - mostly normalized
-    {"ggt_mult": 1.0, "vitamin_d_mult": 1.05, "hdl_mult": 1.02, "b12_mult": 0.95},
+    # Report 1 (Dec 2020) - worst state: high GGT, low vitamin D (winter), low HDL
+    {"ggt_mult": 2.0, "vitamin_d_mult": 0.60, "hdl_mult": 0.82, "b12_mult": 1.15},
+    # Report 2 (Jun 2021) - slight improvement, vitamin D recovers (summer)
+    {"ggt_mult": 1.9, "vitamin_d_mult": 0.85, "hdl_mult": 0.84, "b12_mult": 1.10},
+    # Report 3 (Dec 2021) - GGT still high, vitamin D dips (winter)
+    {"ggt_mult": 1.85, "vitamin_d_mult": 0.65, "hdl_mult": 0.85, "b12_mult": 1.05},
+    # Report 4 (Jun 2022) - lifestyle changes kicking in
+    {"ggt_mult": 1.7, "vitamin_d_mult": 0.90, "hdl_mult": 0.87, "b12_mult": 1.02},
+    # Report 5 (Dec 2022) - continuing improvement, winter vitamin D dip
+    {"ggt_mult": 1.5, "vitamin_d_mult": 0.72, "hdl_mult": 0.90, "b12_mult": 1.0},
+    # Report 6 (Jun 2023) - good progress
+    {"ggt_mult": 1.35, "vitamin_d_mult": 0.95, "hdl_mult": 0.93, "b12_mult": 0.98},
+    # Report 7 (Dec 2023) - near normal, winter dip
+    {"ggt_mult": 1.2, "vitamin_d_mult": 0.75, "hdl_mult": 0.96, "b12_mult": 0.95},
+    # Report 8 (Jun 2024) - almost there
+    {"ggt_mult": 1.1, "vitamin_d_mult": 1.0, "hdl_mult": 0.99, "b12_mult": 0.93},
+    # Report 9 (Dec 2024) - GGT normal, vitamin D managed better this winter
+    {"ggt_mult": 1.0, "vitamin_d_mult": 0.85, "hdl_mult": 1.0, "b12_mult": 0.92},
+    # Report 10 (Jun 2025) - fully normalized
+    {"ggt_mult": 0.95, "vitamin_d_mult": 1.08, "hdl_mult": 1.03, "b12_mult": 0.95},
 ]
 
 
@@ -359,7 +375,8 @@ def main():
         results = build_results(i)
         generate_report(filename, PATIENT, date_str, results)
 
-    print(f"\nGenerated 5 demo reports (demo_report_2.pdf through demo_report_6.pdf)")
+    count = len(REPORT_DATES)
+    print(f"\nGenerated {count} demo reports (demo_report_2.pdf through demo_report_{count + 1}.pdf)")
 
 
 if __name__ == "__main__":
