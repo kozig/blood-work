@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}Changes - Blood Work Analysis{% endblock %}
+
+{% block extra_css %}
+<style>
+    .badge-into-abnormal {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    .badge-into-normal {
+        background: #d4edda;
+        color: #155724;
+    }
+    .badge-abnormal-flip {
+        background: #fff3cd;
+        color: #856404;
+    }
+    .value-shift {
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+    }
+    .value-shift .arrow {
+        color: #999;
+        margin: 0 0.4rem;
+    }
+    .muted {
+        color: #666;
+        font-size: 0.875rem;
+    }
+    .section-heading {
+        margin-top: 1.5rem;
+        margin-bottom: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% macro transition_table(rows) %}
+<table>
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Test</th>
+            <th>Change</th>
+            <th>Value</th>
+            <th>Reference Range</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for t in rows %}
+        <tr>
+            <td class="value-shift">
+                <span class="muted">{{ t.from_date }}</span>
+                <span class="arrow">&rarr;</span>
+                <strong>{{ t.to_date }}</strong>
+            </td>
+            <td>{{ t.test_name }}</td>
+            <td>
+                <span class="badge badge-{{ t.from_flag|lower }}">{{ t.from_flag }}</span>
+                <span class="arrow">&rarr;</span>
+                <span class="badge badge-{{ t.to_flag|lower }}">{{ t.to_flag }}</span>
+                <div class="muted" style="margin-top: 0.2rem;">
+                    {% if t.direction == "into_abnormal" %}went out of range
+                    {% elif t.direction == "into_normal" %}returned to normal
+                    {% else %}flipped sides of range
+                    {% endif %}
+                </div>
+            </td>
+            <td class="value-shift">
+                {{ t.from_value }}
+                <span class="arrow">&rarr;</span>
+                <strong>{{ t.to_value }}</strong>
+                {% if t.units %}<span class="muted">{{ t.units }}</span>{% endif %}
+            </td>
+            <td>{{ t.reference_range or '-' }}</td>
+            <td>
+                <a href="/test/{{ t.test_name }}" class="btn" style="padding: 0.25rem 0.75rem; font-size: 0.875rem;">
+                    View Trend
+                </a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endmacro %}
+
+{% block content %}
+<div class="card">
+    <h2>Status Changes</h2>
+    <p class="muted">
+        Markers that crossed in or out of their reference range between consecutive draws.
+        Use this to spot what shifted at your latest appointment, and to track historical movement.
+    </p>
+
+    {% if transitions|length == 0 %}
+        <div class="alert alert-success" style="margin-top: 1rem;">
+            No status changes detected yet. This view becomes useful once you have at least two reports for the same test.
+        </div>
+        <p>
+            <a href="/upload" class="btn">Upload Another Report</a>
+            <a href="/dashboard" class="btn">Go to Dashboard</a>
+        </p>
+    {% else %}
+        <h3 class="section-heading">Since your most recent draw ({{ latest_draw_date }})</h3>
+        {% if since_last|length == 0 %}
+            <p class="muted">No status changes on the most recent draw.</p>
+        {% else %}
+            {{ transition_table(since_last) }}
+        {% endif %}
+
+        <h3 class="section-heading" style="margin-top: 2.5rem;">All flips ({{ transitions|length }})</h3>
+        {{ transition_table(transitions) }}
+    {% endif %}
+</div>
+{% endblock %}

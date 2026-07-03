@@ -6,7 +6,7 @@ This is a standalone demo application showing how to integrate the bloodwork pac
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from werkzeug.utils import secure_filename
 import os
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 import secrets
 
 # Import bloodwork package
@@ -33,6 +33,12 @@ DATABASE_URL = os.environ.get(
 # Ensure upload folder exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
+# --- TEMPORARY: auto-wipe stale-session data (demo hygiene) ---------------
+# Idle timeout (minutes) after which a visitor's uploaded data is deleted so
+# PHI does not linger between visits. Remove this block, SESSION_STALE_MINUTES,
+# and the clear_stale_session_data() hook below once real auth/retention exists.
+SESSION_STALE_MINUTES = int(os.environ.get('SESSION_STALE_MINUTES', '30'))
+
 # Initialize repository (singleton pattern)
 repository = None
 
@@ -51,6 +57,39 @@ def get_current_user_id():
         # For demo purposes, create a demo user
         session['user_id'] = 'demo-user'
     return session['user_id']
+
+
+# --- TEMPORARY: auto-wipe stale-session data (demo hygiene) ---------------
+@app.before_request
+def clear_stale_session_data():
+    """TEMPORARY: wipe a visitor's data once their session goes stale.
+
+    On every request, compare now against the last-seen timestamp stored in
+    the session. If the gap exceeds SESSION_STALE_MINUTES, delete this
+    visitor's data and reset the session so the next visit starts clean.
+    Remove this hook once real auth/retention exists.
+    """
+    # Don't touch the DB for static assets.
+    if request.endpoint == 'static':
+        return
+
+    now = datetime.now(timezone.utc)
+    last_seen_raw = session.get('last_seen')
+    if last_seen_raw:
+        try:
+            last_seen = datetime.fromisoformat(last_seen_raw)
+        except (ValueError, TypeError):
+            last_seen = now
+        if now - last_seen > timedelta(minutes=SESSION_STALE_MINUTES):
+            user_id = session.get('user_id')
+            if user_id:
+                try:
+                    get_repository().delete_patient_data(user_id)
+                except Exception:
+                    pass  # best-effort cleanup; never block the request
+            session.clear()
+
+    session['last_seen'] = now.isoformat()
 
 
 # Routes
@@ -247,6 +286,29 @@ def test_detail(test_name):
         trend = analysis_service.get_test_trend(user_id, test_name)
 
         return render_template('test_detail.html', test_name=test_name, trend=trend)
+
+    except Exception as e:
+        return render_template('error.html', error=str(e))
+
+
+@app.route('/changes')
+def changes():
+    """View in/out-of-range status transitions across draws."""
+    try:
+        user_id = get_current_user_id()
+        repo = get_repository()
+        analysis_service = AnalysisService(repo)
+
+        transitions = [t.to_dict() for t in analysis_service.get_status_transitions(user_id)]
+        latest_draw_date = transitions[0]['to_date'] if transitions else None
+        since_last = [t for t in transitions if t['to_date'] == latest_draw_date]
+
+        return render_template(
+            'changes.html',
+            transitions=transitions,
+            since_last=since_last,
+            latest_draw_date=latest_draw_date,
+        )
 
     except Exception as e:
         return render_template('error.html', error=str(e))
