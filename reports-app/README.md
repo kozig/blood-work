@@ -16,12 +16,10 @@ This is a standalone Flask demonstration application showing how to integrate th
 ### 1. Install Dependencies
 
 ```bash
-cd flask_demo
+cd reports-app
 
-# Install the bloodwork package from parent directory
-pip install -e ..
-
-# Install Flask
+# Self-contained: this installs Flask AND the vendored bloodwork package
+# (bundled in ./bloodwork). No `pip install -e ..` needed.
 pip install -r requirements.txt
 ```
 
@@ -72,8 +70,11 @@ app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
 ## Project Structure
 
 ```
-flask_demo/
+reports-app/
 ├── app.py                 # Main Flask application
+├── wsgi.py                # gunicorn entrypoint
+├── bloodwork/            # Vendored copy of the parsing/storage/analysis library
+├── sync-lib.sh           # Resync ./bloodwork from the repo-root library
 ├── templates/            # HTML templates
 │   ├── base.html          # Base template
 │   ├── index.html         # Home page
@@ -83,7 +84,7 @@ flask_demo/
 │   └── about.html         # About page
 ├── static/               # Static files (CSS, JS, images)
 ├── uploads/              # Temporary upload directory
-├── requirements.txt      # Python dependencies
+├── requirements.txt      # Python dependencies (incl. vendored lib's deps)
 └── README.md            # This file
 ```
 

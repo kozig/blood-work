@@ -4,217 +4,76 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-A Python-based blood work analysis toolkit for extracting and visualizing medical lab results from LifeLabs PDF reports. The project consists of three main components:
+A framework-agnostic Python package (`bloodwork`) for parsing, storing, and analyzing blood work PDF reports — currently supports LifeLabs format. The package exposes parsers, repositories, and services that can be embedded in any web framework. The deployed Flask app lives in `reports-app/` (self-contained — it vendors its own copy of `bloodwork/`), with Django/FastAPI integration examples in `examples/`.
 
-1. **PDF Scraping**: Extract structured data from LifeLabs PDF reports
-2. **Data Processing**: Parse and clean blood test results into CSV format
-3. **Visualization**: Generate interactive HTML and static charts showing trends over time
+> **Note**: the root-level scripts referenced in older docs (`scrape_bloodwork_advanced.py`, `visualize_bloodwork.py`) have been moved to `legacy/`. New work should target the `bloodwork` package, not the legacy scripts.
 
 ## Key Commands
 
-### PDF Extraction
-
 ```bash
-# First-time setup: Run automated setup script (creates venv + installs dependencies)
-chmod +x setup_and_run.sh
-./setup_and_run.sh
+# Install in editable mode with dev extras
+pip install -e .[dev]
 
-# For subsequent runs: Activate venv first
-source venv/bin/activate
+# Run tests (config in pyproject.toml — auto-generates coverage report)
+pytest
+pytest tests/test_parsers.py                       # single file
+pytest tests/test_parsers.py::TestLifeLabsParser   # single class
+pytest -k "parse_range"                            # by name pattern
 
-# Extract blood work data from PDF (recommended - advanced scraper)
-python scrape_bloodwork_advanced.py [input.pdf] [output.csv]
+# Lint / format / type-check
+black bloodwork/
+flake8 bloodwork/
+mypy bloodwork/
 
-# Default: reads Reports_librepdf.pdf, outputs to blood_work_extracted.csv
-python scrape_bloodwork_advanced.py
+# Run the Flask demo (separate sub-app — has its own README and CLAUDE.md)
+cd reports-app && pip install -r requirements.txt && python app.py
 
-# Fallback scraper (if advanced fails)
-python scrape_bloodwork_pdf.py [input.pdf] [output.csv]
+# Regenerate synthetic test PDFs
+python demo_reports/generate_demo_reports.py
 ```
 
-### Visualization
-
-```bash
-# Activate venv (if not already active)
-source venv/bin/activate
-
-# Generate charts from CSV data
-python visualize_bloodwork.py
-
-# Opens HTML visualization in browser (WSL)
-wslview visualize_bloodwork.html
-
-# Or navigate to file in Windows Explorer
-# \\wsl$\Ubuntu\home\goob\blood-work\visualize_bloodwork.html
-```
-
-### Installation
-
-```bash
-# Recommended: Use the automated setup script (creates venv automatically)
-chmod +x setup_and_run.sh
-./setup_and_run.sh
-
-# Manual setup with venv
-python3 -m venv venv
-source venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
-
-# To activate venv in future sessions
-source venv/bin/activate
-
-# To deactivate venv
-deactivate
-```
+`pyproject.toml` configures pytest with `--cov=bloodwork --cov-report=html --cov-report=term` and black with `line-length = 100`. Mypy is set to `disallow_untyped_defs = true` — new functions need type annotations.
 
 ## Architecture
 
-### PDF Scraping Architecture
+### Layered package design
 
-Two scraping strategies with shared goals but different approaches:
+The `bloodwork/` package follows clean layering. Consumers (Flask app, Django/FastAPI examples) compose these layers; they don't bypass them.
 
-**scrape_bloodwork_advanced.py** (Recommended):
-- `LifeLabsParser` class: Main parser with table extraction and text fallback
-- **Table extraction first**: Uses `pdfplumber`'s table detection for structured data
-- **Text parsing fallback**: Regex patterns for unstructured sections
-- **Hybrid approach**: Combines both methods for maximum accuracy
-- Handles multi-page reports, deduplication, patient metadata extraction
+- **`models/`** — Pydantic data models (`BloodTestResult`, `PatientInfo`, `ReferenceRange`) and enums (`ResultFlag`, `TestCategory`). `ReferenceRange.parse()` handles `"4.0 - 11.0"`, `"<6.0"`, `">=1.00"`. Internal flags are `NORMAL`/`HIGH`/`LOW` — `ResultFlag.from_lifelabs()` translates LifeLabs' `"HI"/"LO"`.
+- **`parsers/`** — `AbstractBloodWorkParser` interface. `LifeLabsParser` uses a hybrid strategy: table extraction via `pdfplumber` first, regex fallback on text, then dedup on `(date, test_name, result)`. The actual extraction work is split across `parsers/extractors/{date,metadata,table,text}.py` — modify those when LifeLabs' format changes, not the parser itself.
+- **`repositories/`** — `AbstractRepository` interface. `DatabaseRepository` is the SQLAlchemy implementation; ORM models in `repositories/models.py` (`PatientInfoORM`, `BloodTestResultORM`). Tables auto-create on init. `save_results()` deduplicates at the DB level too. Pydantic↔ORM conversion happens in `_orm_to_model()`.
+- **`services/`** — Orchestration. `ParserService.parse_and_store(file, patient_id)` is the main entry point. `AnalysisService` produces trends and abnormal-result summaries. `VisualizationService` emits Chart.js-compatible JSON (it does not render anything — rendering is the frontend's job).
+- **`config/`** — `defaults.py` holds env-var-overridable settings (`BLOODWORK_DATABASE_URL`, `BLOODWORK_MAX_PDF_SIZE_MB`, `BLOODWORK_LOG_LEVEL`, `BLOODWORK_REDACT_PHI`). `patterns.py` holds the regex patterns for LifeLabs parsing — touch this when report layouts change.
 
-**scrape_bloodwork_pdf.py** (Fallback):
-- `BloodWorkParser` class: Simpler text-based parser
-- **Text-only parsing**: Uses regex patterns on extracted text
-- Better for reports where table extraction fails
+Top-level `bloodwork/__init__.py` re-exports the public API. Prefer importing from `bloodwork` directly (`from bloodwork import ParserService, DatabaseRepository`) rather than reaching into submodules.
 
-Both scrapers:
-- Extract patient info (name, age, gender, DOB) from first page
-- Parse dates from "Date of Service" headers
-- Identify test categories (Hematology, General Chemistry, Lipids, etc.)
-- Flag abnormal results (HI/LO indicators)
-- Output to CSV with columns: Date of Service, Test Name, Result, Reference Range, Units, Flag
-
-### Data Flow
+### Data flow
 
 ```
-PDF Report (Reports_librepdf.pdf)
-    ↓
-LifeLabsParser/BloodWorkParser
-    ↓ [pdfplumber extraction + regex parsing]
-    ↓
-CSV Export (blood_work_extracted.csv)
-    ↓
-visualize_bloodwork.py (pandas + matplotlib)
-    ↓
-Output: PNG/PDF charts + HTML interactive visualization
+PDF upload → ParserService.validate_pdf_file() → LifeLabsParser.parse()
+  → extractors (table + text) → in-parser dedup
+  → DatabaseRepository.save_results() (DB-level dedup on (date, test_name, result))
+  → ParseResult summary returned to caller
 ```
 
-### Visualization Architecture
+### Extending to new lab formats
 
-**visualize_bloodwork.py**:
-- Reads CSV using pandas
-- Generates 6x4 grid of subplots (24 test panels)
-- Test categories:
-  - Lipid Panel (Cholesterol, HDL, LDL, Triglycerides)
-  - Liver Function (ALT, GGT, ALP, AST)
-  - Complete Blood Count (WBC, RBC, Hemoglobin, Platelets)
-  - Hormones (Testosterone, Free T, TSH, Vitamin D)
-  - Metabolic Panel (Glucose, HbA1C, Creatinine, eGFR)
-  - Inflammation & Other (CRP, Iron, B12, Transferrin Saturation)
-- Reference range visualization: shaded areas or threshold lines
-- Abnormal values highlighted in red with X markers
-- Outputs: blood_work_trends.png (300 DPI) and blood_work_trends.pdf
+Subclass `AbstractBloodWorkParser` (see `parsers/base.py`). `ParserService.get_parser()` is a factory that selects by parser-type string — register new formats there.
 
-**visualize_bloodwork.html**:
-- Standalone interactive HTML with embedded JavaScript
-- No external dependencies required
-- Charts generated client-side using HTML5 Canvas or inline SVG
-- Organized by test category with expandable sections
-- Shows trend lines and abnormal findings summary
+## Repository layout (orientation, not exhaustive)
 
-### Reference Range Parsing
+- `bloodwork/` — the package (importable as `bloodwork`)
+- `reports-app/` — the deployed, **self-contained** Flask app. **Has its own CLAUDE.md** that goes deeper on the Flask-specific routing, session model, and SQLite default. Read it before editing files in that directory. It vendors its own copy of the package at `reports-app/bloodwork/` (a mirror of the root `bloodwork/`), so it deploys with just `pip install -r requirements.txt` — no editable install. Run `reports-app/sync-lib.sh` after changing the root library to update the vendored copy.
+- `examples/` — Django and FastAPI integration snippets (illustrative, not runnable apps)
+- `tests/` — pytest suite (`test_models.py`, `test_parsers.py`, `test_services.py`); `conftest.py` adds project root to `sys.path`
+- `demo_reports/` — sample PDFs plus `generate_demo_reports.py` for synthesizing new ones
+- `legacy/` — pre-refactor scripts kept for reference; do not extend
+- `REFACTORING_PLAN.md` — historical context on the legacy → package migration
 
-`parse_range()` function handles multiple formats:
-- Range: `"4.0 - 11.0"` → (4.0, 11.0)
-- Upper limit: `"<6.0"` → (None, 6.0)
-- Lower limit: `">220"` or `">=1.00"` → (220, None) or (1.0, None)
+## Implementation notes
 
-### Test Categories Recognized
-
-The scrapers identify these LifeLabs section headers:
-- Hematology
-- General Chemistry
-- Lipids
-- Thyroid Function
-- Biochemical Investigation
-- Differential
-- Urinalysis
-- Reproductive
-- Adrenal Function
-- Bone Markers
-- Immunology
-- Muscle Enzymes
-- Serum Proteins
-- Tumour Markers
-
-## Dependencies
-
-- **pdfplumber (≥0.9.0)**: PDF text and table extraction
-- **pandas (≥1.5.0)**: Data manipulation and CSV processing
-- **matplotlib (≥3.5.0)**: Chart generation
-
-Python 3.7+ required (project was developed with Python 3.12.3)
-
-## File Structure
-
-```
-blood-work/
-├── venv/                           # Python virtual environment (not in git)
-├── scrape_bloodwork_advanced.py    # Advanced scraper (table + text)
-├── scrape_bloodwork_pdf.py         # Fallback scraper (text only)
-├── visualize_bloodwork.py          # Chart generator
-├── visualize_bloodwork.html        # Interactive visualization
-├── setup_and_run.sh                # Automated setup script
-├── requirements.txt                # Python dependencies
-├── .gitignore                      # Git exclusions (venv, output files, PDFs)
-├── README.md                       # User-facing documentation
-├── PDF_SCRAPER_README.md           # Detailed scraper documentation
-└── SCRAPER_QUICK_START.txt         # Quick reference guide
-```
-
-## Implementation Notes
-
-### When Modifying Scrapers
-
-1. **Test pattern matching**: LifeLabs format varies by test type; verify regex patterns against actual PDFs
-2. **Deduplication logic**: The advanced scraper checks `(date, test_name, result)` tuples to avoid duplicates from table + text parsing
-3. **Date parsing**: Supports multiple formats (see `_parse_date()` method)
-4. **Patient privacy**: Ensure any logging or output doesn't expose PHI beyond necessary extraction
-
-### When Modifying Visualizations
-
-1. **Test name consistency**: Visualization expects exact test names as extracted by scrapers
-2. **Date format**: CSV must use parseable date format (YYYY-MM-DD recommended)
-3. **Missing data**: `plot_test()` gracefully handles missing or non-numeric data
-4. **Layout**: 6x4 grid is hardcoded; adding tests requires modifying both `plots` list and `n_rows`
-
-### Common Issues
-
-- **No data extracted**: Check if PDF is encrypted or has unexpected format
-- **Duplicate results**: Advanced scraper handles this automatically; basic scraper may need manual deduplication
-- **Missing tests in visualization**: Add test name to `plots` list in visualize_bloodwork.py
-- **Reference range not showing**: Verify CSV contains valid Reference Range values
-
-## Virtual Environment
-
-The project uses a Python virtual environment (`venv/`) to isolate dependencies:
-- Created automatically by `setup_and_run.sh`
-- Located in `venv/` directory (excluded from git)
-- Must be activated before running scripts: `source venv/bin/activate`
-- When active, use `python` command (not `python3`)
-- Deactivate with: `deactivate`
-
-## WSL-Specific Notes
-
-- HTML file can be opened with `wslview` command or via Windows path `\\wsl$\Ubuntu\...`
-- Python scripts should use `python` when venv is active, `python3` otherwise
-- File paths in scripts use forward slashes (Linux convention)
+- **Reference-range parsing edge case**: dash-separated ranges can collide with negative numbers — be careful when extending `ReferenceRange.parse()`.
+- **Deduplication is done twice** (in-parser and in-repository) on purpose: the parser dedups across its own table+text hybrid; the repo dedups across separate uploads of the same report.
+- **PHI**: this package handles Protected Health Information. The `BLOODWORK_REDACT_PHI` config gates whether PHI appears in log output — leave it on (`true`) unless you have a specific reason to disable it for local debugging.
+- **No charting code in the package**: visualization is JSON-only. The legacy `matplotlib`-based scripts in `legacy/` are the exception, and `pandas`/`matplotlib` in `requirements.txt` exist only to keep those runnable.

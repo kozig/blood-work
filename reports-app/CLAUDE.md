@@ -4,13 +4,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Flask web application for uploading, parsing, and visualizing LifeLabs blood work PDF reports. Built on the `bloodwork` Python package (in `bloodwork/` subdirectory) which provides the core parsing, storage, and analysis logic as a framework-agnostic library.
+Flask web application for uploading, parsing, and visualizing LifeLabs blood work PDF reports. **Self-contained**: it ships a vendored copy of the `bloodwork` Python package in `./bloodwork/` (the framework-agnostic parsing/storage/analysis library), so this directory can be deployed on its own with no dependency on a sibling package or editable install.
+
+> **Vendored library — keep in sync.** `./bloodwork/` is a copy of the canonical library at the repo root (`../bloodwork/`). If you change the library source, run `./sync-lib.sh` to mirror the changes back into this app, then commit. Deployments only need this directory.
 
 ## Commands
 
 ```bash
-# Install (bloodwork package from parent dir + Flask dependencies)
-pip install -e .. && pip install -r requirements.txt
+# Install — self-contained: everything (incl. a vendored copy of the
+# bloodwork package in ./bloodwork) is covered by requirements.txt.
+# Do NOT run `pip install -e ..`; this app no longer depends on a sibling.
+pip install -r requirements.txt
 
 # Run dev server (http://localhost:5000)
 python app.py
